@@ -1,0 +1,90 @@
+exrutils provides tools to process OpenEXR files. For example, you may
+want to create a novel sequence for your optical flow algorithm and
+compare the estimates against ground truth information. In addition,
+your 3D modeller is able to export the depth information to OpenEXR
+(usually, this is done by exporting the final rendering to OpenEXR and
+additionally storing to Z buffer to the file). As long as you're able to
+export the camera position to a csv file or use blender_ole, you can
+then use exrflow to compute ground truth optical flow for your sequence.
+
+exrflow
+	Please read the following carefully:
+	
+	Compute "ground truth" optical flow given a set of OpenEXR files
+	and the camera position. The positions for each frame a stored
+	in a csv file in the format
+		a11,a21,a31,a41,a12,a22,...,a44
+		a11,a21,a31,a41,a12,a22,...,a44
+		.
+		.
+		.
+	where one row corresponds to one frame (or OpenEXR file). The
+	aij are the entries of a camera matrix. They can be exported 
+	from blender for a single camera with the help of the script
+	blender_ole, obtainable from https://github.com/rochus/blender_ole
+	
+	The OpenEXR files need only provide a Z layer.
+	
+	The tool assumes a default blender setup, which means using a
+	focal length of 35mm and a sensor size of 32mm (note that these
+	values are hardcoded in blender up until blender 2.61. Since
+	2.61, the user may change these values under the camera options
+	pane). This yields a focal length of 2.1875 in a canonical
+	camera model:
+	
+	The opening angle alpha of the blender default camera is
+	
+	     alpha = atan2(16.0, 35.0) * 2                           (1)
+	
+	to get the focal length in a canonical camera model, where the image
+	plane has an extent of 2.0 (from -1.0 to 1.0) in the largest extent,
+	we have to calculate:
+	
+	     f = b / tan(a/2)                                        (2)
+	
+	where b = 1.0 (because it is half the image plane width). but as we
+	have the 'lens focal length' and the sensor size, we can calculate:
+	
+	     tan(a/2) = (.5 * sensor size) / lens focal length       (3)
+	
+	insert (3) into (2) yields
+	
+	     f = 1.0 / ((.5s) / l)                                   (4)
+	
+	where s is the sensor size and l the lens focal length.
+	Setting s = 32mm and l = 35mm as in the default blender setup yields
+	
+	     f = 2.1875
+	
+	If you use an different lens, you can provide the canonical
+	focal length with the -f <value> option.
+	
+	The tool assumes that the camera is looking into the negative Z
+	direction using a right-handed coordinate system. Thus, the
+	equations to calculate optical flow presented in [1] were
+	adapted to reflect this change.
+	
+	However, if you want to use the default Longuet-Higgins &
+	Prazdny equations because your camera does look into the
+	positive Z direction (or for whatever reason you have), you can
+	switch to these equations with the -l option.
+
+	References:
+
+	[1] The Interpretation of a Moving Retinal Image
+	    H. C. Longuet-Higgins and K. Prazdny
+	    Proceedings of the Royal Society of London. Series B, Biological
+	    Sciences, Vol. 208, No. 1173 (Jul. 17, 1980), pp. 385-397
+
+
+exrcvview
+	This tool shows a sequence of n >= 1 OpenEXR images with the
+	help of OpenCV. You may want to transform the images with the -s
+	switch to sRGB on the fly.
+	If you have a sequence which shall be looped infinitely, pass
+	the -l option to exrcvview. Otherwise, exrcvview will stop at
+	the last frame and continue showing it.
+
+
+exr2pgm
+	Convert an OpenEXR file to gray-scale PGM.
